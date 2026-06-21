@@ -124,6 +124,7 @@
         <span id="lblSettimana" class="settimana"></span>
         <button id="btnNextSett" class="mini">Settimana ›</button>
         <button id="btnRefreshAgenda" class="mini">Aggiorna</button>
+        <button id="btnResetSlots" class="mini danger">Cancella tutti gli slot</button>
       </div>
       <div id="contatori" class="contatori"></div>
       <div id="msgAgenda" class="msg"></div>
@@ -211,6 +212,15 @@
   function th(t){var e=document.createElement('th');e.textContent=t;return e;}
 
   $('btnRefreshAgenda').addEventListener('click',caricaAgenda);
+  $('btnResetSlots').addEventListener('click',function(){
+    if(!confirm('Cancellare TUTTI gli slot per ripartire da una nuova configurazione? Le eventuali prenotazioni già fatte verranno mantenute.'))return;
+    api({action:'resetSlots',token:token}).then(function(res){
+      if(!res.ok){err('msgAgenda',res.error==='token'?'Sessione scaduta, rientra.':'Operazione non riuscita.');return;}
+      settIdx=0;
+      caricaAgenda();
+      ok('msgAgenda','Slot cancellati: '+res.eliminati+'.'+(res.prenotati_mantenuti?' Prenotazioni mantenute: '+res.prenotati_mantenuti+'.':''));
+    }).catch(function(){err('msgAgenda','Errore di rete.');});
+  });
   $('btnPrevSett').addEventListener('click',function(){if(settIdx>0){settIdx--;renderAgenda();}});
   $('btnNextSett').addEventListener('click',function(){if(settIdx<settimane.length-1){settIdx++;renderAgenda();}});
 
