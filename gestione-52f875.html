@@ -42,6 +42,12 @@
   .legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;margin:6px 0}
   .legenda span{display:inline-flex;align-items:center;gap:6px}
   .legenda i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .contatori{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
+  .contatori span{padding:4px 10px;border-radius:6px;font-size:.85rem;font-weight:600;background:#eef2f9;color:#123E90}
+  .contatori .tot{background:#123E90;color:#fff}
+  .contatori .pren{background:#eaf0fb;color:#123E90}
+  .contatori .lib{background:#e7f3ec;color:#1B6D3F}
+  .contatori .bloc{background:#fdf6e3;color:#B8860B}
   .agenda{overflow-x:auto}
   .agenda table{table-layout:fixed;min-width:640px}
   .agenda th,.agenda td{border:1px solid var(--bordo);vertical-align:top;padding:3px}
@@ -112,6 +118,7 @@
         <button id="btnNextSett" class="mini">Settimana ›</button>
         <button id="btnRefreshAgenda" class="mini">Aggiorna</button>
       </div>
+      <div id="contatori" class="contatori"></div>
       <div id="msgAgenda" class="msg"></div>
       <div id="agenda" class="agenda"></div>
     </section>
@@ -165,7 +172,8 @@
     api({action:'listStudents',token:token}).then(function(res){
       if(!res.ok)return;
       var tb=$('tabStud').querySelector('tbody');tb.innerHTML='';
-      (res.studenti||[]).forEach(function(s){
+      var lista=(res.studenti||[]).slice().sort(function(a,b){return String(a.figlio||'').localeCompare(String(b.figlio||''),'it',{sensitivity:'base'});});
+      lista.forEach(function(s){
         var tr=document.createElement('tr');
         tr.innerHTML='<td>'+esc(s.figlio)+'</td><td>'+esc(s.classe)+'</td><td>'+esc(s.genitore)+'</td>'+
           '<td>'+(s.prenotato?'<span class="badge si">sì</span>':'<span class="badge no">no</span>')+'</td>';
@@ -184,6 +192,7 @@
   function normData(v){var s=String(v==null?'':v);var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var d=new Date(s);return isNaN(d)?s:fmtData(d);}
   function normOra(v){var s=String(v==null?'':v);var m=s.match(/(\d{1,2}):(\d{2})/);if(m)return ('0'+m[1]).slice(-2)+':'+m[2];var d=new Date(s);return isNaN(d)?s:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
   function dataObj(ds){var p=ds.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function feriale(ds){var wd=dataObj(ds).getDay();return wd!==0&&wd!==6;}
   function lunediDi(ds){var d=dataObj(ds);var wd=(d.getDay()+6)%7;d.setDate(d.getDate()-wd);return fmtData(d);}
   function etichettaGiorno(ds){var p=ds.split('-');return GIORNI[dataObj(ds).getDay()]+' '+p[2]+'/'+p[1];}
   function uniqSort(a){var m={};a.forEach(function(x){m[x]=true;});return Object.keys(m).sort();}
@@ -197,13 +206,29 @@
     clearErr('msgAgenda');
     api({action:'listSlotsAdmin',token:token}).then(function(res){
       if(!res.ok){err('msgAgenda',res.error==='token'?'Sessione scaduta, rientra.':'Caricamento non riuscito.');return;}
-      slotsAll=(res.slots||[]).map(function(s){return {id:s.id,data:normData(s.data),ora:normOra(s.ora),stato:s.stato,genitore:s.genitore,figli:s.figli,iphone:s.iphone};});
+      slotsAll=(res.slots||[]).map(function(s){return {id:s.id,data:normData(s.data),ora:normOra(s.ora),stato:s.stato,genitore:s.genitore,figli:s.figli,iphone:s.iphone};})
+        .filter(function(s){return feriale(s.data);});
       var set={};slotsAll.forEach(function(s){set[lunediDi(s.data)]=true;});
       settimane=Object.keys(set).sort();
       if(settIdx>=settimane.length)settIdx=settimane.length-1;
       if(settIdx<0)settIdx=0;
+      renderContatori();
       renderAgenda();
     }).catch(function(){err('msgAgenda','Errore di rete.');});
+  }
+
+  function renderContatori(){
+    var tot=slotsAll.length, pren=0, lib=0, bloc=0;
+    slotsAll.forEach(function(s){
+      if(s.stato==='prenotato')pren++;
+      else if(s.stato==='bloccato')bloc++;
+      else lib++;
+    });
+    $('contatori').innerHTML=
+      '<span class="tot">Totali: '+tot+'</span>'+
+      '<span class="pren">Prenotati: '+pren+'</span>'+
+      '<span class="lib">Liberi: '+lib+'</span>'+
+      (bloc?'<span class="bloc">Bloccati: '+bloc+'</span>':'');
   }
 
   function renderAgenda(){
