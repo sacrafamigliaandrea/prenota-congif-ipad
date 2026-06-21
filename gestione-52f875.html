@@ -291,7 +291,7 @@
     }else{
       var n=document.createElement('span');n.className='nome';n.textContent=s.genitore||'';d.appendChild(n);
       var f=document.createElement('span');f.className='figli';f.textContent=s.figli||'';d.appendChild(f);
-      var bdg=document.createElement('span');bdg.className='badge '+(s.iphone==='SI'?'si':'no');bdg.textContent=s.iphone==='SI'?'iPhone sì':'iPhone no';d.appendChild(bdg);
+      var bdg=document.createElement('span');bdg.className='badge '+(s.iphone==='SI'?'si':'no');bdg.textContent=s.iphone==='SI'?'Apple sì':'Apple no';d.appendChild(bdg);
       var b=document.createElement('button');b.className='mini danger';b.textContent='Libera';
       b.addEventListener('click',function(){
         if(!confirm('Liberare lo slot '+s.data+' '+s.ora+'?'))return;

@@ -55,7 +55,7 @@
 <body>
 <header>
   <img class="logo" src="logo.jpg" alt="Scuola Sacra Famiglia">
-  <p class="claim">Configura l'iPad di tuo figlio/a con l'animatore digitale della scuola.</p>
+  <p class="claim">Prenota la configurazione dell'iPad di tuo figlio/a con l'Animatore Digitale</p>
 </header>
 <main>
 
@@ -78,9 +78,11 @@
     <p>Figlio/i:</p>
     <ul id="idFigli" class="figli"></ul>
     <fieldset class="domanda">
-      <legend>Possiedi un iPhone?</legend>
-      <label class="opt"><input type="radio" name="iphone" value="SI"> Sì</label>
-      <label class="opt"><input type="radio" name="iphone" value="NO"> No</label>
+      <legend>In famiglia avete un iPhone o un altro dispositivo Apple?</legend>
+      <p class="nota">Ci serve per preparare la configurazione giusta: con un dispositivo Apple
+        possiamo attivare la condivisione «In famiglia».</p>
+      <label class="opt"><input type="radio" name="iphone" value="SI"> Sì, abbiamo un dispositivo Apple</label>
+      <label class="opt"><input type="radio" name="iphone" value="NO"> No, nessun dispositivo Apple</label>
     </fieldset>
     <button id="btnConferma">Sì, sono io — continua</button>
     <button id="btnNonSonoIo" class="secondario">Non sono io</button>
@@ -105,7 +107,11 @@
       <li>Una carta di credito</li>
       <li>L'iPad di tuo figlio/a</li>
       <li>Se ce l'ha, l'indirizzo @gmail.com di tuo figlio/a</li>
+      <li>Se l'iPad è già stato configurato, eventuali codici di sblocco</li>
+      <li>Se l'Apple ID è stato creato con l'iPhone di tuo figlio/a, porta anche quello</li>
     </ul>
+    <p class="nota">La presenza di tuo figlio/a all'appuntamento è a tua discrezione: può venire
+      oppure no.</p>
     <p class="nota">Per disdire o spostare l'appuntamento scrivi a
       <strong>sacrafamiglia.cerioli@gmail.com</strong>.</p>
   </section>
@@ -159,7 +165,7 @@
   $('btnConferma').addEventListener('click', function(){
     clearErr('msgIdentita');
     var sel=document.querySelector('input[name="iphone"]:checked');
-    if(!sel){err('msgIdentita','Indica se possiedi un iPhone.');return;}
+    if(!sel){err('msgIdentita','Indica se in famiglia avete un dispositivo Apple.');return;}
     iphone=sel.value;
     api({action:'slots',token:token}).then(function(res){
       if(!res.ok){show('vLogin');return;}
