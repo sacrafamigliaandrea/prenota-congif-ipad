@@ -36,6 +36,26 @@
   .msg.attivo{display:block}
   .hidden{display:none}
   input[type=checkbox]{width:auto;transform:scale(1.3)}
+  .agenda-nav{display:flex;align-items:center;gap:12px;margin:4px 0 10px}
+  .agenda-nav button{margin:0}
+  .agenda-nav .settimana{font-family:'Lexend',sans-serif;font-weight:600;color:var(--blu)}
+  .legenda{display:flex;gap:14px;flex-wrap:wrap;font-size:.82rem;margin:6px 0}
+  .legenda span{display:inline-flex;align-items:center;gap:6px}
+  .legenda i{width:14px;height:14px;border-radius:4px;display:inline-block}
+  .agenda{overflow-x:auto}
+  .agenda table{table-layout:fixed;min-width:640px}
+  .agenda th,.agenda td{border:1px solid var(--bordo);vertical-align:top;padding:3px}
+  .agenda th{text-align:center;font-size:.82rem;background:#f4f6fb}
+  .agenda .ora-col{width:54px;white-space:nowrap;font-weight:700;color:var(--blu);text-align:right}
+  .cella{min-height:46px;border-radius:6px;padding:6px;font-size:.8rem}
+  .cella.libero{background:#fff;border:1px dashed var(--bordo);color:#566;cursor:pointer}
+  .cella.libero:hover{border-color:var(--blu);background:#eef3fc}
+  .cella.bloccato{background:#fdf6e3;border:1px solid #e8d6a0;color:var(--ambra);cursor:pointer;font-weight:700}
+  .cella.prenotato{background:#eaf0fb;border:1px solid #c2d2f0}
+  .cella .nome{font-weight:700;color:var(--blu);display:block}
+  .cella .figli{display:block;margin:2px 0}
+  .cella button.mini{margin-top:6px}
+  .vuoto{background:#fafbfe}
 </style>
 </head>
 <body>
@@ -80,9 +100,20 @@
     </section>
 
     <section class="card">
-      <h2>Prenotazioni</h2>
-      <button id="btnRefreshPren" class="mini">Aggiorna</button>
-      <table id="tabPren"><thead><tr><th>Data</th><th>Ora</th><th>Genitore</th><th>Figli</th><th>iPhone</th><th></th></tr></thead><tbody></tbody></table>
+      <h2>Agenda settimanale</h2>
+      <div class="legenda">
+        <span><i style="background:#fff;border:1px dashed #d4ddee"></i> libero (clic per bloccare)</span>
+        <span><i style="background:#fdf6e3;border:1px solid #e8d6a0"></i> bloccato (clic per liberare)</span>
+        <span><i style="background:#eaf0fb;border:1px solid #c2d2f0"></i> prenotato</span>
+      </div>
+      <div class="agenda-nav">
+        <button id="btnPrevSett" class="mini">‹ Settimana</button>
+        <span id="lblSettimana" class="settimana"></span>
+        <button id="btnNextSett" class="mini">Settimana ›</button>
+        <button id="btnRefreshAgenda" class="mini">Aggiorna</button>
+      </div>
+      <div id="msgAgenda" class="msg"></div>
+      <div id="agenda" class="agenda"></div>
     </section>
 
   </div>
@@ -90,6 +121,7 @@
 <script>
   var API='https://script.google.com/macros/s/AKfycbw_MNCPvIdm66EpgPOilIfPSWydxH9VASL5rZENYHgqG4fUwdcc_RN_pxjcc8Iew2b0/exec';
   var token=null;
+  var slotsAll=[], settimane=[], settIdx=0;
   function $(id){return document.getElementById(id);}
   function err(boxId,t){var b=$(boxId);b.textContent=t;b.classList.add('attivo');}
   function ok(boxId,t){var b=$(boxId);b.textContent=t;b.style.background='#e3f0e6';b.style.color='#1B6D3F';b.style.borderColor='#bcdcc4';b.classList.add('attivo');}
@@ -101,7 +133,7 @@
     api({action:'adminLogin',password:$('pw').value}).then(function(res){
       if(!res.ok){err('msgLogin','Password errata.');return;}
       token=res.token;$('vLogin').classList.add('hidden');$('pannello').classList.remove('hidden');
-      caricaStudenti();caricaPrenotazioni();
+      caricaStudenti();caricaAgenda();
     }).catch(function(){err('msgLogin','Errore di rete.');});
   });
 
@@ -147,24 +179,88 @@
     });
   }
 
-  $('btnRefreshPren').addEventListener('click',caricaPrenotazioni);
-  function caricaPrenotazioni(){
-    api({action:'listBookings',token:token}).then(function(res){
-      if(!res.ok)return;
-      var tb=$('tabPren').querySelector('tbody');tb.innerHTML='';
-      (res.prenotazioni||[]).forEach(function(p){
-        var tr=document.createElement('tr');
-        tr.innerHTML='<td>'+esc(p.data)+'</td><td>'+esc(p.ora)+'</td><td>'+esc(p.genitore)+'</td><td>'+esc(p.figli)+'</td>'+
-          '<td>'+(p.iphone==='SI'?'<span class="badge si">sì</span>':'<span class="badge no">no</span>')+'</td>';
-        var td=document.createElement('td');
-        var b=document.createElement('button');b.className='mini danger';b.textContent='Libera slot';
-        b.addEventListener('click',function(){
-          if(!confirm('Liberare lo slot '+p.data+' '+p.ora+'?'))return;
-          api({action:'freeSlot',token:token,id:p.id}).then(function(r){if(r.ok)caricaPrenotazioni();});
-        });
-        td.appendChild(b);tr.appendChild(td);tb.appendChild(tr);
+  var GIORNI=['dom','lun','mar','mer','gio','ven','sab'];
+  function fmtData(d){return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
+  function normData(v){var s=String(v==null?'':v);var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var d=new Date(s);return isNaN(d)?s:fmtData(d);}
+  function normOra(v){var s=String(v==null?'':v);var m=s.match(/(\d{1,2}):(\d{2})/);if(m)return ('0'+m[1]).slice(-2)+':'+m[2];var d=new Date(s);return isNaN(d)?s:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
+  function dataObj(ds){var p=ds.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+  function lunediDi(ds){var d=dataObj(ds);var wd=(d.getDay()+6)%7;d.setDate(d.getDate()-wd);return fmtData(d);}
+  function etichettaGiorno(ds){var p=ds.split('-');return GIORNI[dataObj(ds).getDay()]+' '+p[2]+'/'+p[1];}
+  function uniqSort(a){var m={};a.forEach(function(x){m[x]=true;});return Object.keys(m).sort();}
+  function th(t){var e=document.createElement('th');e.textContent=t;return e;}
+
+  $('btnRefreshAgenda').addEventListener('click',caricaAgenda);
+  $('btnPrevSett').addEventListener('click',function(){if(settIdx>0){settIdx--;renderAgenda();}});
+  $('btnNextSett').addEventListener('click',function(){if(settIdx<settimane.length-1){settIdx++;renderAgenda();}});
+
+  function caricaAgenda(){
+    clearErr('msgAgenda');
+    api({action:'listSlotsAdmin',token:token}).then(function(res){
+      if(!res.ok){err('msgAgenda',res.error==='token'?'Sessione scaduta, rientra.':'Caricamento non riuscito.');return;}
+      slotsAll=(res.slots||[]).map(function(s){return {id:s.id,data:normData(s.data),ora:normOra(s.ora),stato:s.stato,genitore:s.genitore,figli:s.figli,iphone:s.iphone};});
+      var set={};slotsAll.forEach(function(s){set[lunediDi(s.data)]=true;});
+      settimane=Object.keys(set).sort();
+      if(settIdx>=settimane.length)settIdx=settimane.length-1;
+      if(settIdx<0)settIdx=0;
+      renderAgenda();
+    }).catch(function(){err('msgAgenda','Errore di rete.');});
+  }
+
+  function renderAgenda(){
+    var cont=$('agenda');cont.innerHTML='';
+    if(!settimane.length){$('lblSettimana').textContent='—';cont.innerHTML='<p>Nessuno slot generato.</p>';return;}
+    var lun=settimane[settIdx];
+    $('lblSettimana').textContent='Settimana del '+etichettaGiorno(lun)+'  ('+(settIdx+1)+'/'+settimane.length+')';
+    var wk=slotsAll.filter(function(s){return lunediDi(s.data)===lun;});
+    var giorni=uniqSort(wk.map(function(s){return s.data;}));
+    var orari=uniqSort(wk.map(function(s){return s.ora;}));
+    var byKey={};wk.forEach(function(s){byKey[s.data+'|'+s.ora]=s;});
+    var t=document.createElement('table');
+    var thead=document.createElement('thead');var trh=document.createElement('tr');
+    trh.appendChild(th(''));
+    giorni.forEach(function(g){trh.appendChild(th(etichettaGiorno(g)));});
+    thead.appendChild(trh);t.appendChild(thead);
+    var tb=document.createElement('tbody');
+    orari.forEach(function(o){
+      var tr=document.createElement('tr');
+      var tdo=document.createElement('td');tdo.className='ora-col';tdo.textContent=o;tr.appendChild(tdo);
+      giorni.forEach(function(g){
+        var td=document.createElement('td');var s=byKey[g+'|'+o];
+        if(!s){td.className='vuoto';}else{td.appendChild(cellaSlot(s));}
+        tr.appendChild(td);
       });
+      tb.appendChild(tr);
     });
+    t.appendChild(tb);cont.appendChild(t);
+  }
+
+  function cellaSlot(s){
+    var d=document.createElement('div');d.className='cella '+s.stato;
+    if(s.stato==='libero'){
+      d.textContent='libero';d.title='Clic per bloccare';
+      d.addEventListener('click',function(){toggleBlocco(s,true);});
+    }else if(s.stato==='bloccato'){
+      d.textContent='bloccato';d.title='Clic per liberare';
+      d.addEventListener('click',function(){toggleBlocco(s,false);});
+    }else{
+      var n=document.createElement('span');n.className='nome';n.textContent=s.genitore||'';d.appendChild(n);
+      var f=document.createElement('span');f.className='figli';f.textContent=s.figli||'';d.appendChild(f);
+      var bdg=document.createElement('span');bdg.className='badge '+(s.iphone==='SI'?'si':'no');bdg.textContent=s.iphone==='SI'?'iPhone sì':'iPhone no';d.appendChild(bdg);
+      var b=document.createElement('button');b.className='mini danger';b.textContent='Libera';
+      b.addEventListener('click',function(){
+        if(!confirm('Liberare lo slot '+s.data+' '+s.ora+'?'))return;
+        api({action:'freeSlot',token:token,id:s.id}).then(function(r){if(r.ok)caricaAgenda();});
+      });
+      d.appendChild(b);
+    }
+    return d;
+  }
+
+  function toggleBlocco(s,val){
+    api({action:'setBloccato',token:token,id:s.id,value:val}).then(function(r){
+      if(!r.ok){err('msgAgenda',r.error==='slot_prenotato'?'Slot già prenotato, non bloccabile.':(r.error==='token'?'Sessione scaduta, rientra.':'Operazione non riuscita.'));return;}
+      caricaAgenda();
+    }).catch(function(){err('msgAgenda','Errore di rete.');});
   }
   function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
 </script>
