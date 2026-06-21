@@ -54,7 +54,7 @@
 
     <section class="card">
       <h2>Import elenco</h2>
-      <p>Una riga per studente: <code>Figlio; Classe; NomePadre; CF_Padre; NomeMadre; CF_Madre</code> (madre opzionale).</p>
+      <p>Una riga per studente: <code>Figlio; Classe; Nome1; CF1; Nome2; CF2; ...</code> (secondo genitore opzionale; si possono aggiungere altre coppie Nome; CF).</p>
       <textarea id="elenco" placeholder="Marco Ronda; 2A; Mario Ronda; RSSMRA85T10A562S; Lucia Verdi; VRDLRA88M50F205X"></textarea>
       <button id="btnImport">Importa</button>
       <div id="msgImport" class="msg"></div>
@@ -107,8 +107,7 @@
 
   function parseElenco(testo){
     return testo.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){
-      var c=l.split(';').map(function(x){return x.trim();});
-      return [c[0]||'',c[1]||'',c[2]||'',c[3]||'',c[4]||'',c[5]||''];
+      return l.split(';').map(function(x){return x.trim();});
     });
   }
   $('btnImport').addEventListener('click',function(){
