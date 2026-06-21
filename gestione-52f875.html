@@ -163,7 +163,8 @@
     clearErr('msgSlot');
     api({action:'createSlots',token:token,dal:$('dal').value,al:$('al').value,oraInizio:$('oraInizio').value,oraFine:$('oraFine').value,durata:$('durata').value}).then(function(res){
       if(!res.ok){err('msgSlot',res.error==='token'?'Sessione scaduta, rientra.':'Generazione non riuscita.');return;}
-      ok('msgSlot','Creati '+res.creati+' nuovi slot.');
+      ok('msgSlot','Creati '+res.creati+' slot.'+(res.eliminati?' Slot precedenti rimossi: '+res.eliminati+'.':''));
+      caricaAgenda();
     });
   });
 
