@@ -73,6 +73,7 @@
 
   <!-- Stato 2: conferma identità -->
   <section id="vIdentita" class="card hidden">
+    <div id="avvisoPrenLogin" class="msg"></div>
     <h2>Sei tu?</h2>
     <p>Genitore: <strong id="idGenitore"></strong></p>
     <p>Figlio/i:</p>
@@ -152,6 +153,8 @@
       $('idGenitore').textContent=res.genitore;
       $('idFigli').innerHTML='';
       (res.figli||[]).forEach(function(f){var li=document.createElement('li');li.textContent=f;$('idFigli').appendChild(li);});
+      if(res.gia_prenotato){err('avvisoPrenLogin','La tua famiglia ha già una prenotazione per '+formattaData(res.prenotazione.data)+' alle '+res.prenotazione.ora+'. Per modificarla scrivi a sacrafamiglia.cerioli@gmail.com.');}
+      else{clearErr('avvisoPrenLogin');}
       show('vIdentita');
     }).catch(function(){$('btnLogin').disabled=false;err('msgLogin','Errore di rete, riprova.');});
   });
@@ -169,7 +172,8 @@
     iphone=sel.value;
     api({action:'slots',token:token}).then(function(res){
       if(!res.ok){show('vLogin');return;}
-      renderSlots(res.slots||[]);show('vSlot');
+      renderSlots(res.slots||[]);
+      show('vSlot');
     });
   });
 
