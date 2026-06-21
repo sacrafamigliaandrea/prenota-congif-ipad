@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Prenota la configurazione iPad — Scuola Sacra Famiglia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --blu:#123E90; --blu-scuro:#0d2e6b; --ambra:#B8860B;
+    --bg:#f4f6fb; --card:#ffffff; --testo:#16213a; --bordo:#d4ddee;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--testo);
+    font-family:'Atkinson Hyperlegible',system-ui,sans-serif;line-height:1.5}
+  header{background:#fff;border-bottom:3px solid var(--blu);padding:18px 16px;text-align:center}
+  header img.logo{max-height:84px;max-width:240px;width:auto;display:block;margin:0 auto 12px}
+  header .claim{font-family:'Lexend',sans-serif;font-weight:500;font-size:1rem;color:var(--blu);
+    margin:0 auto;max-width:420px}
+  main{max-width:480px;margin:0 auto;padding:16px}
+  .card{background:var(--card);border:1px solid var(--bordo);border-radius:14px;
+    padding:20px;margin-bottom:16px}
+  h2{font-family:'Lexend',sans-serif;font-weight:600;font-size:1.05rem;margin:0 0 12px}
+  label{display:block;font-weight:700;margin-bottom:6px}
+  input[type=text]{width:100%;font-size:16px;padding:14px;border:2px solid var(--bordo);
+    border-radius:10px;text-transform:uppercase;letter-spacing:.04em}
+  input[type=text]:focus{outline:none;border-color:var(--blu)}
+  button{width:100%;font-family:'Lexend',sans-serif;font-weight:600;font-size:1rem;
+    min-height:48px;padding:12px;border:none;border-radius:10px;background:var(--blu);
+    color:#fff;cursor:pointer;margin-top:12px}
+  button:hover{background:var(--blu-scuro)}
+  button.secondario{background:#fff;color:var(--blu);border:2px solid var(--blu)}
+  .msg{padding:12px;border-radius:10px;margin-top:12px;display:none;
+    background:#fdf6e3;color:var(--ambra);border:1px solid #e8d6a0}
+  .msg.attivo{display:block}
+  .giorno{font-family:'Lexend',sans-serif;font-weight:600;margin:18px 0 8px;color:var(--blu)}
+  .slot{width:100%;text-align:left;background:#fff;color:var(--testo);
+    border:2px solid var(--bordo);border-radius:10px;padding:14px;margin-top:8px;font-weight:700}
+  .slot:hover{border-color:var(--blu);background:#f0f4fc}
+  .figli{margin:8px 0 0;padding-left:18px}
+  .nota{font-size:.85rem;color:#566;margin-top:8px}
+  .hidden{display:none}
+  .riepilogo{background:#eef3fc;border:1px solid var(--bordo);border-radius:10px;padding:14px;margin-top:8px}
+  fieldset.domanda{border:1px solid var(--bordo);border-radius:10px;padding:12px 14px;margin:16px 0 0}
+  fieldset.domanda legend{font-family:'Lexend',sans-serif;font-weight:600;font-size:.95rem;color:var(--blu);padding:0 6px}
+  .opt{display:inline-flex;align-items:center;gap:8px;font-weight:700;margin-right:24px}
+  .opt input{width:auto;transform:scale(1.3)}
+  .promemoria{margin:6px 0 0;padding-left:20px}
+  .promemoria li{margin-bottom:5px}
+  .sottotitolo{font-family:'Lexend',sans-serif;font-weight:600;font-size:1.05rem;margin:18px 0 8px;color:var(--blu)}
+</style>
+</head>
+<body>
+<header>
+  <img class="logo" src="logo.jpg" alt="Scuola Sacra Famiglia">
+  <p class="claim">Configura l'iPad di tuo figlio/a con l'animatore digitale della scuola.</p>
+</header>
+<main>
+
+  <!-- Stato 1: login -->
+  <section id="vLogin" class="card">
+    <h2>Accedi col tuo codice fiscale</h2>
+    <label for="cf">Codice fiscale del genitore</label>
+    <input id="cf" type="text" maxlength="16" autocomplete="off" inputmode="latin"
+      placeholder="RSSMRA85T10A562S">
+    <button id="btnLogin">Conferma</button>
+    <div id="msgLogin" class="msg"></div>
+    <p class="nota">Inserisci il codice fiscale di un genitore. I dati restano sul foglio
+      privato della scuola; il codice fiscale è protetto e non viene memorizzato in chiaro.</p>
+  </section>
+
+  <!-- Stato 2: conferma identità -->
+  <section id="vIdentita" class="card hidden">
+    <h2>Sei tu?</h2>
+    <p>Genitore: <strong id="idGenitore"></strong></p>
+    <p>Figlio/i:</p>
+    <ul id="idFigli" class="figli"></ul>
+    <fieldset class="domanda">
+      <legend>Possiedi un iPhone?</legend>
+      <label class="opt"><input type="radio" name="iphone" value="SI"> Sì</label>
+      <label class="opt"><input type="radio" name="iphone" value="NO"> No</label>
+    </fieldset>
+    <button id="btnConferma">Sì, sono io — continua</button>
+    <button id="btnNonSonoIo" class="secondario">Non sono io</button>
+    <div id="msgIdentita" class="msg"></div>
+  </section>
+
+  <!-- Stato 3: scelta slot -->
+  <section id="vSlot" class="card hidden">
+    <h2>Scegli una fascia oraria</h2>
+    <p class="nota">Un solo appuntamento per famiglia: copre gli iPad di tutti i tuoi figli.</p>
+    <div id="slotList"></div>
+    <div id="msgSlot" class="msg"></div>
+  </section>
+
+  <!-- Stato 4: fine -->
+  <section id="vFine" class="card hidden">
+    <h2>Prenotazione confermata</h2>
+    <div class="riepilogo" id="fineRiepilogo"></div>
+    <p class="sottotitolo">Cosa portare all'appuntamento</p>
+    <ul class="promemoria">
+      <li>Lo smartphone del genitore</li>
+      <li>Una carta di credito</li>
+      <li>L'iPad di tuo figlio/a</li>
+      <li>Se ce l'ha, l'indirizzo @gmail.com di tuo figlio/a</li>
+    </ul>
+    <p class="nota">Per disdire o spostare l'appuntamento scrivi a
+      <strong>sacrafamiglia.cerioli@gmail.com</strong>.</p>
+  </section>
+
+</main>
+<script>
+  var API='https://script.google.com/macros/s/AKfycbw_MNCPvIdm66EpgPOilIfPSWydxH9VASL5rZENYHgqG4fUwdcc_RN_pxjcc8Iew2b0/exec';
+  var token=null;
+  var iphone=null;
+  function $(id){return document.getElementById(id);}
+  function show(id){['vLogin','vIdentita','vSlot','vFine'].forEach(function(v){
+    $(v).classList.toggle('hidden', v!==id);});}
+  function err(boxId,testo){var b=$(boxId);b.textContent=testo;b.classList.add('attivo');}
+  function clearErr(boxId){$(boxId).classList.remove('attivo');}
+
+  function api(payload){
+    return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},
+      body:JSON.stringify(payload)}).then(function(r){return r.json();});
+  }
+
+  // CF check lato UX (identico a lib/cf.js)
+  function normalizeCF(s){return String(s==null?'':s).toUpperCase().replace(/\s/g,'');}
+  var CF_ODD={'0':1,'1':0,'2':5,'3':7,'4':9,'5':13,'6':15,'7':17,'8':19,'9':21,'A':1,'B':0,'C':5,'D':7,'E':9,'F':13,'G':15,'H':17,'I':19,'J':21,'K':2,'L':4,'M':18,'N':20,'O':11,'P':3,'Q':6,'R':8,'S':12,'T':14,'U':16,'V':10,'W':22,'X':25,'Y':24,'Z':23};
+  var CF_EVEN={'0':0,'1':1,'2':2,'3':3,'4':4,'5':5,'6':6,'7':7,'8':8,'9':9,'A':0,'B':1,'C':2,'D':3,'E':4,'F':5,'G':6,'H':7,'I':8,'J':9,'K':10,'L':11,'M':12,'N':13,'O':14,'P':15,'Q':16,'R':17,'S':18,'T':19,'U':20,'V':21,'W':22,'X':23,'Y':24,'Z':25};
+  function isValidCF(input){var cf=normalizeCF(input);if(!/^[A-Z0-9]{16}$/.test(cf))return false;
+    var sum=0;for(var i=0;i<15;i++){var ch=cf.charAt(i);sum+=((i+1)%2===1)?CF_ODD[ch]:CF_EVEN[ch];}
+    return cf.charAt(15)===String.fromCharCode(65+(sum%26));}
+
+  $('btnLogin').addEventListener('click', function(){
+    clearErr('msgLogin');
+    var cf=normalizeCF($('cf').value);
+    if(!isValidCF(cf)){err('msgLogin','Controlla il codice fiscale.');return;}
+    $('btnLogin').disabled=true;
+    api({action:'login',cf:cf}).then(function(res){
+      $('btnLogin').disabled=false;
+      if(!res.ok){err('msgLogin','Codice fiscale non riconosciuto.');return;}
+      token=res.token;
+      $('idGenitore').textContent=res.genitore;
+      $('idFigli').innerHTML='';
+      (res.figli||[]).forEach(function(f){var li=document.createElement('li');li.textContent=f;$('idFigli').appendChild(li);});
+      show('vIdentita');
+    }).catch(function(){$('btnLogin').disabled=false;err('msgLogin','Errore di rete, riprova.');});
+  });
+
+  $('btnNonSonoIo').addEventListener('click', function(){
+    token=null;iphone=null;$('cf').value='';
+    var c=document.querySelector('input[name="iphone"]:checked');if(c)c.checked=false;
+    show('vLogin');
+  });
+
+  $('btnConferma').addEventListener('click', function(){
+    clearErr('msgIdentita');
+    var sel=document.querySelector('input[name="iphone"]:checked');
+    if(!sel){err('msgIdentita','Indica se possiedi un iPhone.');return;}
+    iphone=sel.value;
+    api({action:'slots',token:token}).then(function(res){
+      if(!res.ok){show('vLogin');return;}
+      renderSlots(res.slots||[]);show('vSlot');
+    });
+  });
+
+  function renderSlots(slots){
+    var box=$('slotList');box.innerHTML='';clearErr('msgSlot');
+    if(!slots.length){box.innerHTML='<p>Nessuna fascia disponibile al momento.</p>';return;}
+    var perGiorno={};
+    slots.forEach(function(s){(perGiorno[s.data]=perGiorno[s.data]||[]).push(s);});
+    Object.keys(perGiorno).sort().forEach(function(giorno){
+      var h=document.createElement('div');h.className='giorno';h.textContent=formattaData(giorno);box.appendChild(h);
+      perGiorno[giorno].sort(function(a,b){return a.ora<b.ora?-1:1;}).forEach(function(s){
+        var b=document.createElement('button');b.className='slot';
+        b.textContent=s.ora+' · '+s.durata+' min';
+        b.addEventListener('click',function(){prenota(s);});box.appendChild(b);
+      });
+    });
+  }
+  function formattaData(ymd){
+    var p=ymd.split('-');var d=new Date(p[0],p[1]-1,p[2]);
+    return d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
+  }
+  function prenota(s){
+    api({action:'book',token:token,id:s.id,iphone:iphone}).then(function(res){
+      if(!res.ok){
+        if(res.error==='gia_prenotato'){err('msgSlot','La tua famiglia ha già una prenotazione. Per modificarla scrivi a sacrafamiglia.cerioli@gmail.com.');}
+        else if(res.error==='slot_occupato'){err('msgSlot','Questa fascia è appena stata occupata. Scegline un\'altra.');api({action:'slots',token:token}).then(function(r){if(r.ok)renderSlots(r.slots||[]);});}
+        else if(res.error==='token'){show('vLogin');}
+        else {err('msgSlot','Non è stato possibile prenotare, riprova.');}
+        return;
+      }
+      $('fineRiepilogo').innerHTML='<strong>'+formattaData(res.data)+'</strong><br>ore '+res.ora;
+      show('vFine');
+    });
+  }
+</script>
+</body>
+</html>

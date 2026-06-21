@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Configurazione iPad — Scuola Sacra Famiglia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Lexend:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--blu:#123E90;--blu-scuro:#0d2e6b;--ambra:#B8860B;--bg:#f4f6fb;--card:#fff;--testo:#16213a;--bordo:#d4ddee;}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--testo);font-family:'Atkinson Hyperlegible',system-ui,sans-serif;line-height:1.5}
+  header{background:var(--blu);color:#fff;padding:16px 24px}
+  header h1{font-family:'Lexend',sans-serif;font-weight:600;font-size:1.1rem;margin:0}
+  main{max-width:1100px;margin:0 auto;padding:24px}
+  .card{background:var(--card);border:1px solid var(--bordo);border-radius:12px;padding:20px;margin-bottom:20px}
+  h2{font-family:'Lexend',sans-serif;font-weight:600;font-size:1rem;margin:0 0 14px}
+  label{display:block;font-weight:700;margin:10px 0 4px}
+  input,textarea{font-family:inherit;font-size:15px;padding:10px;border:2px solid var(--bordo);border-radius:8px;width:100%}
+  input:focus,textarea:focus{outline:none;border-color:var(--blu)}
+  textarea{min-height:120px;resize:vertical}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  .row>div{flex:1;min-width:150px}
+  button{font-family:'Lexend',sans-serif;font-weight:600;font-size:.95rem;min-height:42px;padding:10px 18px;border:none;border-radius:8px;background:var(--blu);color:#fff;cursor:pointer;margin-top:12px}
+  button:hover{background:var(--blu-scuro)}
+  button.mini{min-height:34px;padding:6px 12px;margin:0;font-size:.85rem}
+  button.danger{background:#fff;color:var(--ambra);border:2px solid var(--ambra)}
+  table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.92rem}
+  th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--bordo)}
+  th{font-family:'Lexend',sans-serif;font-weight:600;color:var(--blu)}
+  .badge{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px}
+  .badge.si{background:#e3f0e6;color:#1B6D3F}
+  .badge.no{background:#fdf6e3;color:var(--ambra)}
+  .msg{padding:10px;border-radius:8px;margin-top:10px;display:none;background:#fdf6e3;color:var(--ambra);border:1px solid #e8d6a0}
+  .msg.attivo{display:block}
+  .hidden{display:none}
+  input[type=checkbox]{width:auto;transform:scale(1.3)}
+</style>
+</head>
+<body>
+<header><h1>Amministrazione · Configurazione iPad</h1></header>
+<main>
+
+  <section id="vLogin" class="card">
+    <h2>Accesso amministratore</h2>
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password">
+    <button id="btnAdminLogin">Entra</button>
+    <div id="msgLogin" class="msg"></div>
+  </section>
+
+  <div id="pannello" class="hidden">
+
+    <section class="card">
+      <h2>Import elenco</h2>
+      <p>Una riga per studente: <code>Figlio; Classe; NomePadre; CF_Padre; NomeMadre; CF_Madre</code> (madre opzionale).</p>
+      <textarea id="elenco" placeholder="Marco Ronda; 2A; Mario Ronda; RSSMRA85T10A562S; Lucia Verdi; VRDLRA88M50F205X"></textarea>
+      <button id="btnImport">Importa</button>
+      <div id="msgImport" class="msg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Genera slot</h2>
+      <div class="row">
+        <div><label>Dal</label><input id="dal" type="date"></div>
+        <div><label>Al</label><input id="al" type="date"></div>
+        <div><label>Ora inizio</label><input id="oraInizio" type="time" value="14:00"></div>
+        <div><label>Ora fine</label><input id="oraFine" type="time" value="17:00"></div>
+        <div><label>Durata (min)</label><input id="durata" type="number" value="15" min="5"></div>
+      </div>
+      <button id="btnSlot">Genera</button>
+      <div id="msgSlot" class="msg"></div>
+    </section>
+
+    <section class="card">
+      <h2>Studenti</h2>
+      <button id="btnRefreshStud" class="mini">Aggiorna elenco</button>
+      <table id="tabStud"><thead><tr><th>Figlio</th><th>Classe</th><th>Genitore</th><th>Prenotato</th><th>Configurato</th></tr></thead><tbody></tbody></table>
+    </section>
+
+    <section class="card">
+      <h2>Prenotazioni</h2>
+      <button id="btnRefreshPren" class="mini">Aggiorna</button>
+      <table id="tabPren"><thead><tr><th>Data</th><th>Ora</th><th>Genitore</th><th>Figli</th><th>iPhone</th><th></th></tr></thead><tbody></tbody></table>
+    </section>
+
+  </div>
+</main>
+<script>
+  var API='https://script.google.com/macros/s/AKfycbw_MNCPvIdm66EpgPOilIfPSWydxH9VASL5rZENYHgqG4fUwdcc_RN_pxjcc8Iew2b0/exec';
+  var token=null;
+  function $(id){return document.getElementById(id);}
+  function err(boxId,t){var b=$(boxId);b.textContent=t;b.classList.add('attivo');}
+  function ok(boxId,t){var b=$(boxId);b.textContent=t;b.style.background='#e3f0e6';b.style.color='#1B6D3F';b.style.borderColor='#bcdcc4';b.classList.add('attivo');}
+  function clearErr(boxId){var b=$(boxId);b.classList.remove('attivo');b.style.background='';b.style.color='';b.style.borderColor='';}
+  function api(p){return fetch(API,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(p)}).then(function(r){return r.json();});}
+
+  $('btnAdminLogin').addEventListener('click',function(){
+    clearErr('msgLogin');
+    api({action:'adminLogin',password:$('pw').value}).then(function(res){
+      if(!res.ok){err('msgLogin','Password errata.');return;}
+      token=res.token;$('vLogin').classList.add('hidden');$('pannello').classList.remove('hidden');
+      caricaStudenti();caricaPrenotazioni();
+    }).catch(function(){err('msgLogin','Errore di rete.');});
+  });
+
+  function parseElenco(testo){
+    return testo.split('\n').map(function(l){return l.trim();}).filter(Boolean).map(function(l){
+      var c=l.split(';').map(function(x){return x.trim();});
+      return [c[0]||'',c[1]||'',c[2]||'',c[3]||'',c[4]||'',c[5]||''];
+    });
+  }
+  $('btnImport').addEventListener('click',function(){
+    clearErr('msgImport');
+    var rows=parseElenco($('elenco').value);
+    api({action:'importElenco',token:token,rows:rows}).then(function(res){
+      if(!res.ok){err('msgImport',res.error==='token'?'Sessione scaduta, rientra.':'Import non riuscito.');return;}
+      ok('msgImport','Importati '+res.studenti+' studenti, '+res.genitori+' genitori. Righe ignorate: '+res.ignorate+'.');
+      caricaStudenti();
+    });
+  });
+
+  $('btnSlot').addEventListener('click',function(){
+    clearErr('msgSlot');
+    api({action:'createSlots',token:token,dal:$('dal').value,al:$('al').value,oraInizio:$('oraInizio').value,oraFine:$('oraFine').value,durata:$('durata').value}).then(function(res){
+      if(!res.ok){err('msgSlot',res.error==='token'?'Sessione scaduta, rientra.':'Generazione non riuscita.');return;}
+      ok('msgSlot','Creati '+res.creati+' nuovi slot.');
+    });
+  });
+
+  $('btnRefreshStud').addEventListener('click',caricaStudenti);
+  function caricaStudenti(){
+    api({action:'listStudents',token:token}).then(function(res){
+      if(!res.ok)return;
+      var tb=$('tabStud').querySelector('tbody');tb.innerHTML='';
+      (res.studenti||[]).forEach(function(s){
+        var tr=document.createElement('tr');
+        tr.innerHTML='<td>'+esc(s.figlio)+'</td><td>'+esc(s.classe)+'</td><td>'+esc(s.genitore)+'</td>'+
+          '<td>'+(s.prenotato?'<span class="badge si">sì</span>':'<span class="badge no">no</span>')+'</td>';
+        var td=document.createElement('td');
+        var cb=document.createElement('input');cb.type='checkbox';cb.checked=s.configurato;
+        cb.addEventListener('change',function(){
+          api({action:'setConfigurato',token:token,sid:s.sid,value:cb.checked}).then(function(r){if(!r.ok)cb.checked=!cb.checked;});
+        });
+        td.appendChild(cb);tr.appendChild(td);tb.appendChild(tr);
+      });
+    });
+  }
+
+  $('btnRefreshPren').addEventListener('click',caricaPrenotazioni);
+  function caricaPrenotazioni(){
+    api({action:'listBookings',token:token}).then(function(res){
+      if(!res.ok)return;
+      var tb=$('tabPren').querySelector('tbody');tb.innerHTML='';
+      (res.prenotazioni||[]).forEach(function(p){
+        var tr=document.createElement('tr');
+        tr.innerHTML='<td>'+esc(p.data)+'</td><td>'+esc(p.ora)+'</td><td>'+esc(p.genitore)+'</td><td>'+esc(p.figli)+'</td>'+
+          '<td>'+(p.iphone==='SI'?'<span class="badge si">sì</span>':'<span class="badge no">no</span>')+'</td>';
+        var td=document.createElement('td');
+        var b=document.createElement('button');b.className='mini danger';b.textContent='Libera slot';
+        b.addEventListener('click',function(){
+          if(!confirm('Liberare lo slot '+p.data+' '+p.ora+'?'))return;
+          api({action:'freeSlot',token:token,id:p.id}).then(function(r){if(r.ok)caricaPrenotazioni();});
+        });
+        td.appendChild(b);tr.appendChild(td);tb.appendChild(tr);
+      });
+    });
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});}
+</script>
+</body>
+</html>
