@@ -87,15 +87,22 @@
     </section>
 
     <section class="card">
-      <h2>Genera slot</h2>
+      <h2>Genera slot — un giorno alla volta</h2>
       <div class="row">
-        <div><label>Dal</label><input id="dal" type="date"></div>
-        <div><label>Al</label><input id="al" type="date"></div>
-        <div><label>Ora inizio</label><input id="oraInizio" type="time" value="14:00"></div>
-        <div><label>Ora fine</label><input id="oraFine" type="time" value="17:00"></div>
-        <div><label>Durata (min)</label><input id="durata" type="number" value="15" min="5"></div>
+        <div><label>Giorno</label><input id="giorno" type="date"></div>
+        <div><label>Durata (min)</label><input id="durata" type="number" value="30" min="5"></div>
       </div>
-      <button id="btnSlot">Genera</button>
+      <div class="row">
+        <div><label><input id="attMattino" type="checkbox"> Mattino</label></div>
+        <div><label>Inizio</label><input id="mattInizio" type="time" value="09:00"></div>
+        <div><label>Fine</label><input id="mattFine" type="time" value="12:00"></div>
+      </div>
+      <div class="row">
+        <div><label><input id="attPomeriggio" type="checkbox" checked> Pomeriggio</label></div>
+        <div><label>Inizio</label><input id="pomInizio" type="time" value="15:00"></div>
+        <div><label>Fine</label><input id="pomFine" type="time" value="18:00"></div>
+      </div>
+      <button id="btnSlot">Genera giorno</button>
       <div id="msgSlot" class="msg"></div>
     </section>
 
@@ -161,9 +168,14 @@
 
   $('btnSlot').addEventListener('click',function(){
     clearErr('msgSlot');
-    api({action:'createSlots',token:token,dal:$('dal').value,al:$('al').value,oraInizio:$('oraInizio').value,oraFine:$('oraFine').value,durata:$('durata').value}).then(function(res){
+    if(!$('giorno').value){err('msgSlot','Scegli un giorno.');return;}
+    if(!$('attMattino').checked && !$('attPomeriggio').checked){err('msgSlot','Attiva almeno il mattino o il pomeriggio.');return;}
+    var req={action:'createSlots',token:token,giorno:$('giorno').value,durata:$('durata').value,mattino:null,pomeriggio:null};
+    if($('attMattino').checked)req.mattino={inizio:$('mattInizio').value,fine:$('mattFine').value};
+    if($('attPomeriggio').checked)req.pomeriggio={inizio:$('pomInizio').value,fine:$('pomFine').value};
+    api(req).then(function(res){
       if(!res.ok){err('msgSlot',res.error==='token'?'Sessione scaduta, rientra.':'Generazione non riuscita.');return;}
-      ok('msgSlot','Creati '+res.creati+' slot.'+(res.eliminati?' Slot precedenti rimossi: '+res.eliminati+'.':''));
+      ok('msgSlot','Creati '+res.creati+' slot.'+(res.eliminati?' Slot del giorno rimossi prima: '+res.eliminati+'.':''));
       caricaAgenda();
     });
   });
@@ -193,7 +205,6 @@
   function normData(v){var s=String(v==null?'':v);var m=s.match(/(\d{4})-(\d{2})-(\d{2})/);if(m)return m[1]+'-'+m[2]+'-'+m[3];var d=new Date(s);return isNaN(d)?s:fmtData(d);}
   function normOra(v){var s=String(v==null?'':v);var m=s.match(/(\d{1,2}):(\d{2})/);if(m)return ('0'+m[1]).slice(-2)+':'+m[2];var d=new Date(s);return isNaN(d)?s:('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);}
   function dataObj(ds){var p=ds.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
-  function feriale(ds){var wd=dataObj(ds).getDay();return wd!==0&&wd!==6;}
   function lunediDi(ds){var d=dataObj(ds);var wd=(d.getDay()+6)%7;d.setDate(d.getDate()-wd);return fmtData(d);}
   function etichettaGiorno(ds){var p=ds.split('-');return GIORNI[dataObj(ds).getDay()]+' '+p[2]+'/'+p[1];}
   function uniqSort(a){var m={};a.forEach(function(x){m[x]=true;});return Object.keys(m).sort();}
@@ -207,8 +218,7 @@
     clearErr('msgAgenda');
     api({action:'listSlotsAdmin',token:token}).then(function(res){
       if(!res.ok){err('msgAgenda',res.error==='token'?'Sessione scaduta, rientra.':'Caricamento non riuscito.');return;}
-      slotsAll=(res.slots||[]).map(function(s){return {id:s.id,data:normData(s.data),ora:normOra(s.ora),stato:s.stato,genitore:s.genitore,figli:s.figli,iphone:s.iphone};})
-        .filter(function(s){return feriale(s.data);});
+      slotsAll=(res.slots||[]).map(function(s){return {id:s.id,data:normData(s.data),ora:normOra(s.ora),stato:s.stato,genitore:s.genitore,figli:s.figli,iphone:s.iphone};});
       var set={};slotsAll.forEach(function(s){set[lunediDi(s.data)]=true;});
       settimane=Object.keys(set).sort();
       if(settIdx>=settimane.length)settIdx=settimane.length-1;
