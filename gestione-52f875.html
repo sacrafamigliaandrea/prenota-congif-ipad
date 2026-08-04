@@ -32,6 +32,7 @@
   .badge{display:inline-block;font-size:.78rem;font-weight:700;padding:2px 8px;border-radius:999px}
   .badge.si{background:#e3f0e6;color:#1B6D3F}
   .badge.no{background:#fdf6e3;color:var(--ambra)}
+  .badge.mod{background:#eef3fc;color:var(--blu);border:1px solid var(--bordo);margin-left:4px}
   .msg{padding:10px;border-radius:8px;margin-top:10px;display:none;background:#fdf6e3;color:var(--ambra);border:1px solid #e8d6a0}
   .msg.attivo{display:block}
   .hidden{display:none}
@@ -292,6 +293,7 @@
       var n=document.createElement('span');n.className='nome';n.textContent=s.genitore||'';d.appendChild(n);
       var f=document.createElement('span');f.className='figli';f.textContent=s.figli||'';d.appendChild(f);
       var bdg=document.createElement('span');bdg.className='badge '+(s.iphone==='SI'?'si':'no');bdg.textContent=s.iphone==='SI'?'Apple sì':'Apple no';d.appendChild(bdg);
+      if(s.cambi>0){var bc=document.createElement('span');bc.className='badge mod';bc.textContent='spostato '+s.cambi+'×';bc.title='Il genitore ha cambiato orario '+s.cambi+' volta/e';d.appendChild(bc);}
       var b=document.createElement('button');b.className='mini danger';b.textContent='Libera';
       b.addEventListener('click',function(){
         if(!confirm('Liberare lo slot '+s.data+' '+s.ora+'?'))return;
