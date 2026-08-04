@@ -118,8 +118,7 @@
     <p class="nota">La presenza di tuo figlio/a all'appuntamento è a tua discrezione: può venire
       oppure no.</p>
     <p class="nota">Puoi cambiare orario da solo/a rientrando in questa pagina col tuo codice
-      fiscale, fino a 12 ore prima dell'appuntamento. Per disdire scrivi a
-      <strong>sacrafamiglia.cerioli@gmail.com</strong>.</p>
+      fiscale, fino a 12 ore prima dell'appuntamento. Per disdire contatta la scuola.</p>
   </section>
 
 </main>
@@ -129,7 +128,6 @@
   var iphone=null;
   var modalita='prenota';   // 'prenota' | 'cambio'
   var pren=null;            // prenotazione attiva della famiglia, se esiste
-  var EMAIL='sacrafamiglia.cerioli@gmail.com';
   function $(id){return document.getElementById(id);}
   function show(id){['vLogin','vIdentita','vSlot','vFine'].forEach(function(v){
     $(v).classList.toggle('hidden', v!==id);});}
@@ -180,8 +178,8 @@
     if(pren){
       var t='La tua famiglia ha già una prenotazione per '+formattaData(pren.data)+' alle '+pren.ora+'. ';
       if(pren.modificabile){t+='Puoi cambiare orario ancora '+volte(pren.rimasti)+'.';}
-      else if(pren.rimasti<=0){t+='Hai esaurito i cambi disponibili online: per modificarla scrivi a '+EMAIL+'.';}
-      else{t+='Manca meno di 12 ore all\'appuntamento: per modificarla scrivi a '+EMAIL+'.';}
+      else if(pren.rimasti<=0){t+='Hai esaurito i cambi disponibili online: per modificarla contatta la scuola.';}
+      else{t+='Manca meno di 12 ore all\'appuntamento: per modificarla contatta la scuola.';}
       err('avvisoPrenLogin',t);
     }else{clearErr('avvisoPrenLogin');}
     $('btnCambia').classList.toggle('hidden', !(pren&&pren.modificabile));
@@ -280,8 +278,8 @@
     api({action:'moveBooking',token:token,id:s.id}).then(function(res){
       if(!res.ok){
         if(res.error==='slot_occupato'){err('msgSlot','Questa fascia è appena stata occupata. Scegline un\'altra.');ricaricaSlot();}
-        else if(res.error==='limite_cambi'){err('msgSlot','Hai esaurito i cambi disponibili online. Scrivi a '+EMAIL+'.');}
-        else if(res.error==='troppo_tardi'){err('msgSlot','Manca meno di 12 ore all\'appuntamento: non è più possibile cambiarlo online. Scrivi a '+EMAIL+'.');}
+        else if(res.error==='limite_cambi'){err('msgSlot','Hai esaurito i cambi disponibili online: per modificare l\'appuntamento contatta la scuola.');}
+        else if(res.error==='troppo_tardi'){err('msgSlot','Manca meno di 12 ore all\'appuntamento: non è più possibile cambiarlo online. Contatta la scuola.');}
         else if(res.error==='stesso_slot'){err('msgSlot','È la fascia che hai già prenotato: scegline un\'altra.');}
         else if(res.error==='nessuna_prenotazione'){err('msgSlot','Non risulta una prenotazione da spostare.');}
         else if(res.error==='token'){show('vLogin');}
