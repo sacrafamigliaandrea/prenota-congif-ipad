@@ -35,6 +35,7 @@
   .msg{padding:12px;border-radius:10px;margin-top:12px;display:none;
     background:#fdf6e3;color:var(--ambra);border:1px solid #e8d6a0}
   .msg.attivo{display:block}
+  #avvisoPrenLogin.attivo{margin-bottom:18px}
   .giorno{font-family:'Lexend',sans-serif;font-weight:600;margin:18px 0 8px;color:var(--blu)}
   .slot{width:100%;text-align:left;background:#fff;color:var(--testo);
     border:2px solid var(--bordo);border-radius:10px;padding:14px;margin-top:8px;font-weight:700}
@@ -78,7 +79,7 @@
     <p>Genitore: <strong id="idGenitore"></strong></p>
     <p>Figlio/i:</p>
     <ul id="idFigli" class="figli"></ul>
-    <fieldset class="domanda">
+    <fieldset class="domanda" id="fsApple">
       <legend>In famiglia avete un iPhone o un altro dispositivo Apple?</legend>
       <p class="nota">Ci serve per preparare la configurazione giusta: con un dispositivo Apple
         possiamo attivare la condivisione «In famiglia».</p>
@@ -86,22 +87,25 @@
       <label class="opt"><input type="radio" name="iphone" value="NO"> No, nessun dispositivo Apple</label>
     </fieldset>
     <button id="btnConferma">Sì, sono io — continua</button>
+    <button id="btnCambia" class="hidden">Cambia orario dell'appuntamento</button>
     <button id="btnNonSonoIo" class="secondario">Non sono io</button>
     <div id="msgIdentita" class="msg"></div>
   </section>
 
   <!-- Stato 3: scelta slot -->
   <section id="vSlot" class="card hidden">
-    <h2>Scegli una fascia oraria</h2>
-    <p class="nota">Un solo appuntamento per famiglia: copre gli iPad di tutti i tuoi figli.</p>
+    <h2 id="slotTitolo">Scegli una fascia oraria</h2>
+    <p class="nota" id="slotNota">Un solo appuntamento per famiglia: copre gli iPad di tutti i tuoi figli.</p>
     <div id="slotList"></div>
     <div id="msgSlot" class="msg"></div>
+    <button id="btnAnnullaCambio" class="secondario hidden">Torna indietro senza cambiare</button>
   </section>
 
   <!-- Stato 4: fine -->
   <section id="vFine" class="card hidden">
-    <h2>Prenotazione confermata</h2>
+    <h2 id="fineTitolo">Prenotazione confermata</h2>
     <div class="riepilogo" id="fineRiepilogo"></div>
+    <p class="nota" id="fineCambi"></p>
     <p class="sottotitolo">Cosa portare all'appuntamento</p>
     <ul class="promemoria">
       <li>Lo smartphone del genitore</li>
@@ -113,7 +117,8 @@
     </ul>
     <p class="nota">La presenza di tuo figlio/a all'appuntamento è a tua discrezione: può venire
       oppure no.</p>
-    <p class="nota">Per disdire o spostare l'appuntamento scrivi a
+    <p class="nota">Puoi cambiare orario da solo/a rientrando in questa pagina col tuo codice
+      fiscale, fino a 12 ore prima dell'appuntamento. Per disdire scrivi a
       <strong>sacrafamiglia.cerioli@gmail.com</strong>.</p>
   </section>
 
@@ -122,6 +127,9 @@
   var API='https://script.google.com/macros/s/AKfycbw_MNCPvIdm66EpgPOilIfPSWydxH9VASL5rZENYHgqG4fUwdcc_RN_pxjcc8Iew2b0/exec';
   var token=null;
   var iphone=null;
+  var modalita='prenota';   // 'prenota' | 'cambio'
+  var pren=null;            // prenotazione attiva della famiglia, se esiste
+  var EMAIL='sacrafamiglia.cerioli@gmail.com';
   function $(id){return document.getElementById(id);}
   function show(id){['vLogin','vIdentita','vSlot','vFine'].forEach(function(v){
     $(v).classList.toggle('hidden', v!==id);});}
@@ -153,16 +161,54 @@
       $('idGenitore').textContent=res.genitore;
       $('idFigli').innerHTML='';
       (res.figli||[]).forEach(function(f){var li=document.createElement('li');li.textContent=f;$('idFigli').appendChild(li);});
-      if(res.gia_prenotato){err('avvisoPrenLogin','La tua famiglia ha già una prenotazione per '+formattaData(res.prenotazione.data)+' alle '+res.prenotazione.ora+'. Per modificarla scrivi a sacrafamiglia.cerioli@gmail.com.');}
-      else{clearErr('avvisoPrenLogin');}
+      pren=res.gia_prenotato?res.prenotazione:null;
+      aggiornaIdentita();
       show('vIdentita');
     }).catch(function(){$('btnLogin').disabled=false;err('msgLogin','Errore di rete, riprova.');});
   });
 
   $('btnNonSonoIo').addEventListener('click', function(){
-    token=null;iphone=null;$('cf').value='';
+    token=null;iphone=null;pren=null;modalita='prenota';$('cf').value='';
     var c=document.querySelector('input[name="iphone"]:checked');if(c)c.checked=false;
     show('vLogin');
+  });
+
+  function volte(n){return n===1?'una volta':n+' volte';}
+
+  // se la famiglia ha già prenotato non c'è nulla da confermare: si può solo cambiare orario
+  function aggiornaIdentita(){
+    if(pren){
+      var t='La tua famiglia ha già una prenotazione per '+formattaData(pren.data)+' alle '+pren.ora+'. ';
+      if(pren.modificabile){t+='Puoi cambiare orario ancora '+volte(pren.rimasti)+'.';}
+      else if(pren.rimasti<=0){t+='Hai esaurito i cambi disponibili online: per modificarla scrivi a '+EMAIL+'.';}
+      else{t+='Manca meno di 12 ore all\'appuntamento: per modificarla scrivi a '+EMAIL+'.';}
+      err('avvisoPrenLogin',t);
+    }else{clearErr('avvisoPrenLogin');}
+    $('btnCambia').classList.toggle('hidden', !(pren&&pren.modificabile));
+    $('fsApple').classList.toggle('hidden', !!pren);
+    $('btnConferma').classList.toggle('hidden', !!pren);
+  }
+
+  $('btnCambia').addEventListener('click', function(){
+    clearErr('msgIdentita');
+    modalita='cambio';
+    api({action:'slots',token:token}).then(function(res){
+      if(!res.ok){show('vLogin');return;}
+      if(res.gia_prenotato)pren=res.prenotazione;
+      $('slotTitolo').textContent='Scegli il nuovo orario';
+      $('slotNota').textContent='Appuntamento attuale: '+formattaData(pren.data)+' alle '+pren.ora+
+        '. Scegliendo una nuova fascia, quella attuale verrà liberata.';
+      $('btnAnnullaCambio').classList.remove('hidden');
+      renderSlots(res.slots||[]);
+      show('vSlot');
+    });
+  });
+
+  $('btnAnnullaCambio').addEventListener('click', function(){
+    modalita='prenota';
+    $('btnAnnullaCambio').classList.add('hidden');
+    aggiornaIdentita();
+    show('vIdentita');
   });
 
   $('btnConferma').addEventListener('click', function(){
@@ -170,8 +216,12 @@
     var sel=document.querySelector('input[name="iphone"]:checked');
     if(!sel){err('msgIdentita','Indica se in famiglia avete un dispositivo Apple.');return;}
     iphone=sel.value;
+    modalita='prenota';
     api({action:'slots',token:token}).then(function(res){
       if(!res.ok){show('vLogin');return;}
+      $('slotTitolo').textContent='Scegli una fascia oraria';
+      $('slotNota').textContent='Un solo appuntamento per famiglia: copre gli iPad di tutti i tuoi figli.';
+      $('btnAnnullaCambio').classList.add('hidden');
       renderSlots(res.slots||[]);
       show('vSlot');
     });
@@ -196,17 +246,49 @@
     if(isNaN(d.getTime()))return String(ymd);
     return d.toLocaleDateString('it-IT',{weekday:'long',day:'numeric',month:'long'});
   }
+  function ricaricaSlot(){
+    api({action:'slots',token:token}).then(function(r){if(r.ok)renderSlots(r.slots||[]);});
+  }
+
+  function fine(res,titolo){
+    pren={data:res.data,ora:res.ora,cambi:res.cambi,rimasti:res.rimasti,modificabile:res.rimasti>0};
+    modalita='prenota';
+    $('btnAnnullaCambio').classList.add('hidden');
+    $('fineTitolo').textContent=titolo;
+    $('fineRiepilogo').innerHTML='<strong>'+formattaData(res.data)+'</strong><br>ore '+res.ora;
+    $('fineCambi').textContent=res.rimasti>0
+      ? 'Puoi ancora cambiare orario '+volte(res.rimasti)+'.'
+      : 'Hai esaurito i cambi disponibili online.';
+    show('vFine');
+  }
+
   function prenota(s){
+    if(modalita==='cambio'){cambia(s);return;}
     api({action:'book',token:token,id:s.id,iphone:iphone}).then(function(res){
       if(!res.ok){
-        if(res.error==='gia_prenotato'){err('msgSlot','La tua famiglia ha già una prenotazione. Per modificarla scrivi a sacrafamiglia.cerioli@gmail.com.');}
-        else if(res.error==='slot_occupato'){err('msgSlot','Questa fascia è appena stata occupata. Scegline un\'altra.');api({action:'slots',token:token}).then(function(r){if(r.ok)renderSlots(r.slots||[]);});}
+        if(res.error==='gia_prenotato'){err('msgSlot','La tua famiglia ha già una prenotazione: torna indietro per cambiarne l\'orario.');}
+        else if(res.error==='slot_occupato'){err('msgSlot','Questa fascia è appena stata occupata. Scegline un\'altra.');ricaricaSlot();}
         else if(res.error==='token'){show('vLogin');}
         else {err('msgSlot','Non è stato possibile prenotare, riprova.');}
         return;
       }
-      $('fineRiepilogo').innerHTML='<strong>'+formattaData(res.data)+'</strong><br>ore '+res.ora;
-      show('vFine');
+      fine(res,'Prenotazione confermata');
+    });
+  }
+
+  function cambia(s){
+    api({action:'moveBooking',token:token,id:s.id}).then(function(res){
+      if(!res.ok){
+        if(res.error==='slot_occupato'){err('msgSlot','Questa fascia è appena stata occupata. Scegline un\'altra.');ricaricaSlot();}
+        else if(res.error==='limite_cambi'){err('msgSlot','Hai esaurito i cambi disponibili online. Scrivi a '+EMAIL+'.');}
+        else if(res.error==='troppo_tardi'){err('msgSlot','Manca meno di 12 ore all\'appuntamento: non è più possibile cambiarlo online. Scrivi a '+EMAIL+'.');}
+        else if(res.error==='stesso_slot'){err('msgSlot','È la fascia che hai già prenotato: scegline un\'altra.');}
+        else if(res.error==='nessuna_prenotazione'){err('msgSlot','Non risulta una prenotazione da spostare.');}
+        else if(res.error==='token'){show('vLogin');}
+        else {err('msgSlot','Non è stato possibile cambiare orario, riprova.');}
+        return;
+      }
+      fine(res,'Appuntamento spostato');
     });
   }
 </script>
